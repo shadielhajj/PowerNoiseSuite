@@ -39,7 +39,7 @@ class PPFNoiseNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "batch_size": ("INT", {"default": 1, "max": 64, "min": 1, "step": 1}),
+                "batch_size": ("INT", {"default": 1, "max": 10000, "min": 1, "step": 1}),
                 "width": ("INT", {"default": 512, "max": 8192, "min": 64, "step": 1}),
                 "height": ("INT", {"default": 512, "max": 8192, "min": 64, "step": 1}),
                 "resampling": (["nearest-exact", "bilinear", "area", "bicubic", "bislerp"],),
@@ -47,7 +47,6 @@ class PPFNoiseNode:
                 "Y": ("FLOAT", {"default": 0, "max": 99999999, "min": -99999999, "step": 0.01}),
                 "Z": ("FLOAT", {"default": 0, "max": 99999999, "min": -99999999, "step": 0.01}),
                 "evolution": ("FLOAT", {"default": 0.0, "max": 1.0, "min": 0.0, "step": 0.01}),
-                "frame": ("INT", {"default": 0, "max": 99999999, "min": 0, "step": 1}),
                 "scale": ("FLOAT", {"default": 5, "max": 2048, "min": 2, "step": 0.01}),
                 "octaves": ("INT", {"default": 8, "max": 8, "min": 1, "step": 1}),
                 "persistence": ("FLOAT", {"default": 1.5, "max": 23.0, "min": 0.01, "step": 0.01}),
@@ -72,7 +71,7 @@ class PPFNoiseNode:
 
     CATEGORY = "Power Noise Suite/Noise"
     
-    def power_fractal_latent(self, batch_size, width, height, resampling, X, Y, Z, evolution, frame, scale, octaves, persistence, lacunarity, exponent, brightness, contrast, clamp_min, clamp_max, seed, device, optional_vae=None, ppf_settings=None):
+    def power_fractal_latent(self, batch_size, width, height, resampling, X, Y, Z, evolution, scale, octaves, persistence, lacunarity, exponent, brightness, contrast, clamp_min, clamp_max, seed, device, optional_vae=None, ppf_settings=None):
     
         if ppf_settings:
             ppf = ppf_settings
@@ -80,7 +79,6 @@ class PPFNoiseNode:
             Y = ppf['Y']
             Z = ppf['Z']
             evolution = ppf['evolution']
-            frame = ppf['frame']
             scale = ppf['scale']
             octaves = ppf['octaves']
             persistence = ppf['persistence']
@@ -98,13 +96,13 @@ class PPFNoiseNode:
 
         channel_tensors = []
         for i in range(batch_size):
-            nseed = seed + i * 12
+            nseed = seed
             rgb_noise_maps = []
             
             rgb_image = torch.zeros(4, height, width)
             
             for j in range(3):
-                rgba_noise_map = self.generate_noise_map(width, height, X, Y, Z, frame, device, evolution, octaves, persistence, lacunarity, exponent, scale, brightness, contrast, nseed + j, clamp_min, clamp_max)
+                rgba_noise_map = self.generate_noise_map(width, height, X, Y, Z, i, device, evolution, octaves, persistence, lacunarity, exponent, scale, brightness, contrast, nseed + j, clamp_min, clamp_max)
                 rgb_noise_map = rgba_noise_map.squeeze(-1)
                 rgb_noise_map *= color_intensity
                 rgb_noise_map *= masking_intensity
